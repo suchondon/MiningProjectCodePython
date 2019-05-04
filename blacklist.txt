@@ -1,3 +1,2 @@
 [blacklist]
-lyra2v3 = 1
 

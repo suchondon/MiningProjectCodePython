@@ -64,11 +64,10 @@ def checkProfit(wallet):
         money = Decimal(data['unsold'])
         if limitTime!='':
             limitTime = int(limitTime)
-            count = 1
-            while miningFlag and count<=limitTime:
+            lasttime = time.time()
+            while miningFlag and (time.time()-lasttime)<limitTime:
                 print("count Switch")
                 time.sleep(1)
-                count+=1
             try:
                 getWallet = requests.get(url='https://www.zpool.ca/api/wallet?address='+wallet)
                 data  = getWallet.json()
@@ -560,16 +559,14 @@ class App(QWidget):
 
     def runNotify(self):
         global NotifyFlag
-        count = 1
         while True:
             NotifyFlag=True
             timenotify = readConfig('notify','notifytime','config.ini')
             if timenotify !='':
                 timenotify = int(timenotify)
-                while(NotifyFlag and count <=timenotify):
+                lasttime = time.time()
+                while(NotifyFlag and (time.time()-lasttime)<timenotify):
                     time.sleep(1)
-                    count+=1
-                count = 1
                 if NotifyFlag:
                     miningname = readConfig('mining','miningname','config.ini')
                     LineValue = readConfig('notify','tokenline','config.ini')
@@ -661,15 +658,15 @@ class App(QWidget):
                 self.textboxMigingname.setEnabled(False)
                 self.btnSaveMining.setEnabled(False)
                 self.btnStart.setText("Start..")
-                StartMining = Thread(target=switchAlgo, args=(wallet,))
-                StartMining.daemon = True
-                StartMining.start()
-                StartStop = Thread(target=self.btnStartStop)
-                StartStop.daemon = True
-                StartStop.start()
                 GPUCheck = Thread(target=self.GPUCheck, args=(wallet,))
                 GPUCheck.daemon = True
+                StartMining = Thread(target=switchAlgo, args=(wallet,))
+                StartMining.daemon = True
+                StartStop = Thread(target=self.btnStartStop)
+                StartStop.daemon = True
                 GPUCheck.start()
+                StartMining.start()
+                StartStop.start()
             elif checkStart==1:
                 self.btnStart.setText("Start")
                 self.textboxWallet.setEnabled(True)
@@ -720,15 +717,18 @@ class App(QWidget):
     def GPUCheck(self,wallet):
         global GPUCheckFlag,miningFlag,selectAlgo,MiningProcess,checkStart
         GPUCheckFlag = True
-        LoadCount = 0
-        FanCount = 0
-        TemCount = 0
-        timeToCheck = 60
+        wallet = readConfig('mining','wallet','config.ini')
+        LoadCount = 1
+        FanCount = 1
+        TemCount = 1
+        timeToCheck = 30
+        gpulowfan = 40
+        gpulowtem = 50
+        count = 1
         while(GPUCheckFlag):
                 gpulowload = readConfig('mining','gpuload','config.ini')
                 gpuhighfan = readConfig('mining','gpufan','config.ini')
                 gpuhightem = readConfig('mining','gputem','config.ini')
-                count = 1
                 process = subprocess.Popen(os.getcwd()+r'\GPU\nvidia-smi.exe --format=csv,noheader --query-gpu=gpu_name,utilization.gpu,utilization.memory,fan.speed,temperature.gpu', shell=True, stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
                 GPUValue = str(process)
                 newValue = GPUValue.replace("%", "")
@@ -740,15 +740,16 @@ class App(QWidget):
                     gpulowload = int(gpulowload)
                     gpuhighfan = int(gpuhighfan)
                     gpuhightem = int(gpuhightem)
-                    while GPUCheckFlag and count<=timeToCheck:
+                    lasttime = time.time()
+                    while GPUCheckFlag and (time.time()-lasttime)<timeToCheck:
                         time.sleep(1)
-                        count+=1
+                        
                     if GPUCheckFlag:
                         print("IF notify TRUE")
-                        if int(Value[1])<gpulowload:
+                        if int(Value[1])<gpulowload and miningFlag:
                                 LoadCount+=1
-                                if LoadCount>3:
-                                    msg = '"GPU Load < '+str(gpulowload)+' %"'
+                                if LoadCount>=count:
+                                    msg = 'GPU Load < '+str(gpulowload)+' %'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
                                     linetoken = readConfig('notify','tokenline','config.ini')
@@ -757,13 +758,13 @@ class App(QWidget):
                                     saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
                                     if miningFlag:
                                         switchAlgo(wallet)
-                                    LoadCount=0
+                                    LoadCount=1
                         else:
-                                LoadCount=0
+                                LoadCount=1
 
-                        if int(Value[3])>gpuhighfan:
+                        if int(Value[3])>gpuhighfan and miningFlag:
                                 FanCount+=1
-                                if FanCount>3:
+                                if FanCount>=count:
                                     msg = 'GPU FAN use > '+str(gpuhighfan)+' % Stop mining now'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
@@ -777,15 +778,15 @@ class App(QWidget):
                                         self.btnSaveMining.setEnabled(True)
                                         MiningProcess.kill()
                                         checkStart = 0
-                                        GPUCheckFlag = False
                                         miningFlag = False
-                                    FanCount=0
+                                    FanCount=1
                         else:
-                                FanCount=0
+                                FanCount=1
 
-                        if int(Value[4])>gpuhightem:
+                        if int(Value[4])>gpuhightem and miningFlag:
                                 TemCount+=1
-                                if TemCount>1:
+                                print("TemCount")
+                                if TemCount>=count:
                                     msg = 'GPU Temperature > '+str(gpuhightem)+' '+u'\u2103'+' Stop mining now'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
@@ -799,11 +800,19 @@ class App(QWidget):
                                         self.btnSaveMining.setEnabled(True)
                                         MiningProcess.kill()
                                         checkStart = 0
-                                        GPUCheckFlag = False
                                         miningFlag = False
-                                    TemCount=0 
+                                    TemCount=1
                         else:
-                                TemCount=0
+                                TemCount=1
+
+                        if MiningProcess.poll()!=None and int(Value[3])<gpulowfan and int(Value[4])<gpulowtem:
+                            if wallet!='':
+                                self.btnStart.setText("Stop")
+                                self.textboxWallet.setEnabled(False)
+                                self.textboxMigingname.setEnabled(False)
+                                self.btnSaveMining.setEnabled(False)
+                                checkStart = 1
+                                mining(wallet)
 
 
 if __name__ == '__main__':

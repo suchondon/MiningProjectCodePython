@@ -723,11 +723,11 @@ class App(QWidget):
         LoadCount = 0
         FanCount = 0
         TemCount = 0
-        timeToCheck = 900
+        timeToCheck = 60
         while(GPUCheckFlag):
-                gpuload = readConfig('mining','gpuload','config.ini')
-                gpufan = readConfig('mining','gpufan','config.ini')
-                gputem = readConfig('mining','gputem','config.ini')
+                gpulowload = readConfig('mining','gpuload','config.ini')
+                gpuhighfan = readConfig('mining','gpufan','config.ini')
+                gpuhightem = readConfig('mining','gputem','config.ini')
                 count = 1
                 process = subprocess.Popen(os.getcwd()+r'\GPU\nvidia-smi.exe --format=csv,noheader --query-gpu=gpu_name,utilization.gpu,utilization.memory,fan.speed,temperature.gpu', shell=True, stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
                 GPUValue = str(process)
@@ -735,20 +735,20 @@ class App(QWidget):
                 newValue = newValue.replace(" ", "")
                 Value = newValue.split(",")
 
-                if gpuload!='' and gpufan!='' and gputem!='':
+                if gpulowload!='' and gpuhighfan!='' and gpuhightem!='':
                     print("IF != null")
-                    gpuload = int(gpuload)
-                    gpufan = int(gpufan)
-                    gputem = int(gputem)
+                    gpulowload = int(gpulowload)
+                    gpuhighfan = int(gpuhighfan)
+                    gpuhightem = int(gpuhightem)
                     while GPUCheckFlag and count<=timeToCheck:
                         time.sleep(1)
                         count+=1
                     if GPUCheckFlag:
                         print("IF notify TRUE")
-                        if int(Value[1])<gpuload:
+                        if int(Value[1])<gpulowload:
                                 LoadCount+=1
                                 if LoadCount>3:
-                                    msg = '"GPU Load < '+gpuload+' %"'
+                                    msg = '"GPU Load < '+str(gpulowload)+' %"'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
                                     linetoken = readConfig('notify','tokenline','config.ini')
@@ -761,10 +761,10 @@ class App(QWidget):
                         else:
                                 LoadCount=0
 
-                        if int(Value[3])>gpufan:
+                        if int(Value[3])>gpuhighfan:
                                 FanCount+=1
                                 if FanCount>3:
-                                    msg = 'GPU FAN use > '+gpufan+' % Stop mining now'
+                                    msg = 'GPU FAN use > '+str(gpuhighfan)+' % Stop mining now'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
                                     linetoken = readConfig('notify','tokenline','config.ini')
@@ -783,10 +783,10 @@ class App(QWidget):
                         else:
                                 FanCount=0
 
-                        if int(Value[4])>gputem:
+                        if int(Value[4])>gpuhightem:
                                 TemCount+=1
-                                if TemCount>3:
-                                    msg = 'GPU Temperature > '+gputem+' '+u'\u2103'+' Stop mining now'
+                                if TemCount>1:
+                                    msg = 'GPU Temperature > '+str(gpuhightem)+' '+u'\u2103'+' Stop mining now'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
                                     linetoken = readConfig('notify','tokenline','config.ini')

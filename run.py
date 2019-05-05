@@ -92,46 +92,49 @@ def switchAlgo(wallet):
         x = requests.get(url='https://www.zpool.ca/json/algo_profitability.json')
         data  = x.json()
     except requests.exceptions.RequestException:
-        pass
-    profit = 0.0
-    blacklist = ['']
-    AlgoProfit = {}
-    selectAlgo = ""
-    algo = ['allium','bitcore','blake2s','c11','groestl','hmq1725','keccakc',
-            'lbry','lyra2v2','lyra2v3','lyra2z','myr-gr','neoscrypt','nist5',
-            'phi2','polytimos','quark','qubit','scrypt','sha256t','sib',
-            'skein','skunk','sonoa','timetravel','tribus','x11','x13','x14',
-            'x16r','x16s','x17']
-    for i in algo:
-        block = readConfig('blacklist',i,'blacklist.txt')
-        if block!='':
-            block = int(block)
-            if block==1:
-                blacklist.append(i)
+        data = ''
+    if data!='':
+        profit = 0.0
+        blacklist = ['']
+        AlgoProfit = {}
+        selectAlgo = ""
+        algo = ['allium','bitcore','blake2s','c11','groestl','hmq1725','keccakc',
+                'lbry','lyra2v2','lyra2v3','lyra2z','myr-gr','neoscrypt','nist5',
+                'phi2','polytimos','quark','qubit','scrypt','sha256t','sib',
+                'skein','skunk','sonoa','timetravel','tribus','x11','x13','x14',
+                'x16r','x16s','x17']
+        for i in algo:
+            block = readConfig('blacklist',i,'blacklist.txt')
+            if block!='':
+                block = int(block)
+                if block==1:
+                    blacklist.append(i)
 
-    for i in algo:
-        data[i].reverse()
-        profit=float(data[i][0][1])
-        AlgoProfit[i] = profit
-    for i in algo:
-        for j in blacklist:
-            if i==j:
-                AlgoProfit.pop(i)
-    
-    selectAlgo = max(AlgoProfit,key=AlgoProfit.get)
-                
+        for i in algo:
+            data[i].reverse()
+            profit=float(data[i][0][1])
+            AlgoProfit[i] = profit
+        for i in algo:
+            for j in blacklist:
+                if i==j:
+                    AlgoProfit.pop(i)
+        
+        selectAlgo = max(AlgoProfit,key=AlgoProfit.get)
+                    
 
-    if checkStart==0:
-        pastAlgo = selectAlgo
-        mining(wallet)
-    elif selectAlgo==pastAlgo:
-        pass
-    elif selectAlgo!=pastAlgo:
-        pastAlgo = selectAlgo
-        miningFlag = False
-        time.sleep(1)
-        MiningProcess.kill()
-        mining(wallet)
+        if checkStart==0:
+            pastAlgo = selectAlgo
+            mining(wallet)
+        elif selectAlgo==pastAlgo:
+            pass
+        elif selectAlgo!=pastAlgo:
+            pastAlgo = selectAlgo
+            miningFlag = False
+            time.sleep(1)
+            MiningProcess.kill()
+            mining(wallet)
+    else:
+        print('Please check your internet connect')
 
 # def benchmark(wallet):
 #     count = 1

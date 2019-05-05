@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QLineEdi
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
 
-global benchmarkFlag
+#global benchmarkFlag
 global NotifyFlag
 global miningFlag
 global MiningProcess
@@ -36,9 +36,9 @@ def mining(wallet):
     miningFlag=True
     try:
         getFromPool = requests.get(url='https://www.zpool.ca/api/status')
+        data  = getFromPool.json()
     except requests.exceptions.RequestException:
         pass
-    data  = getFromPool.json()
     MiningProcess = subprocess.Popen(os.getcwd()+r'\miner\ccminer\ccminer-x64.exe -b 4068 -a '+algo+' -o stratum+tcp://'+algo+'.mine.zpool.ca:'+str(data[algo]['port'])+' -u '+wallet+' -p ID=Test01,c=BTC',shell=False,creationflags=subprocess.CREATE_NEW_CONSOLE)
     checkStart = 1
     atexit.register(MiningProcess.kill)
@@ -57,9 +57,10 @@ def checkProfit(wallet):
         limitTime = readConfig('mining','timeprofit','config.ini')
         try:
             getWallet = requests.get(url='https://www.zpool.ca/api/wallet?address='+wallet)
+            data  = getWallet.json()
         except requests.exceptions.RequestException:
             pass
-        data  = getWallet.json()
+        
         money = Decimal(data['unsold'])
         if limitTime!='':
             limitTime = int(limitTime)
@@ -70,11 +71,12 @@ def checkProfit(wallet):
                 count+=1
             try:
                 getWallet = requests.get(url='https://www.zpool.ca/api/wallet?address='+wallet)
+                data  = getWallet.json()
             except requests.exceptions.RequestException:
                 pass
-            data  = getWallet.json()
+            
             newmoney = Decimal(data['unsold'])
-            if newmoney==money:
+            if newmoney==money and miningFlag:
                 saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
                 print('Add '+selectAlgo)
             if miningFlag:
@@ -86,8 +88,11 @@ def checkProfit(wallet):
 
 def switchAlgo(wallet):
     global MiningProcess,miningFlag,pastAlgo,checkStart,blacklist,selectAlgo
-    x = requests.get(url='https://www.zpool.ca/json/algo_profitability.json')
-    data  = x.json()
+    try:
+        x = requests.get(url='https://www.zpool.ca/json/algo_profitability.json')
+        data  = x.json()
+    except requests.exceptions.RequestException:
+        pass
     profit = 0.0
     blacklist = ['']
     AlgoProfit = {}
@@ -372,7 +377,6 @@ class App(QWidget):
 
 
         self.btnStart = QPushButton('Start', self)
-        #self.btnStart.setToolTip('Start Mining')
         self.btnStart.setStyleSheet('font: 64px')
         self.btnStart.resize(200,100)
         self.btnStart.move(350,190)
@@ -527,7 +531,7 @@ class App(QWidget):
             Value = GPUValue.split(",")
             self.labelGPU.setText(Value[0])
             self.labelGPU.adjustSize()
-            self.labelGPUValue.setText('Load '+Value[1]+' Memory'+Value[2]+' Fan'+Value[3]+' '+u'\N{DEGREE SIGN}'+'C'+Value[4])
+            self.labelGPUValue.setText('Load '+Value[1]+' Memory'+Value[2]+' Fan'+Value[3]+' '+Value[4]+' '+u'\u2103')
             self.labelGPUValue.adjustSize()
         
 
@@ -716,6 +720,7 @@ class App(QWidget):
         LoadCount = 0
         FanCount = 0
         TemCount = 0
+        timeToCheck = 900
         while(GPUCheckFlag):
                 gpuload = readConfig('mining','gpuload','config.ini')
                 gpufan = readConfig('mining','gpufan','config.ini')
@@ -732,7 +737,7 @@ class App(QWidget):
                     gpuload = int(gpuload)
                     gpufan = int(gpufan)
                     gputem = int(gputem)
-                    while GPUCheckFlag and count<=900:
+                    while GPUCheckFlag and count<=timeToCheck:
                         time.sleep(1)
                         count+=1
                     if GPUCheckFlag:
@@ -740,23 +745,23 @@ class App(QWidget):
                         if int(Value[1])<gpuload:
                                 LoadCount+=1
                                 if LoadCount>3:
+                                    msg = '"GPU Load < '+gpuload+' %"'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
                                     linetoken = readConfig('notify','tokenline','config.ini')
-                                    line(linetoken,"GPU Load < 40 %")
-                                    facebook(facebooktoken,FacebookID,"GPU Load < 40 %")
+                                    line(linetoken,msg)
+                                    facebook(facebooktoken,FacebookID,msg)
                                     saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
                                     if miningFlag:
                                         switchAlgo(wallet)
                                     LoadCount=0
                         else:
                                 LoadCount=0
-                                print("reset LoadCount = 0 ")
 
                         if int(Value[3])>gpufan:
                                 FanCount+=1
                                 if FanCount>3:
-                                    msg = 'GPU FAN use > 90 % Stop mining now'
+                                    msg = 'GPU FAN use > '+gpufan+' % Stop mining now'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
                                     linetoken = readConfig('notify','tokenline','config.ini')
@@ -774,30 +779,28 @@ class App(QWidget):
                                     FanCount=0
                         else:
                                 FanCount=0
-                                print("reset FanCount = 0 ")
 
                         if int(Value[4])>gputem:
                                 TemCount+=1
                                 if TemCount>3:
-                                    msg = 'GPU Temperature > 90 '+u'\u2103'+' Stop mining now'
+                                    msg = 'GPU Temperature > '+gputem+' '+u'\u2103'+' Stop mining now'
                                     FacebookID = readConfig('notify','facebookID','config.ini')
                                     facebooktoken = readConfig('notify','tokenfacebook','config.ini')
                                     linetoken = readConfig('notify','tokenline','config.ini')
                                     line(linetoken,msg)
                                     facebook(facebooktoken,FacebookID,msg)
-                                    # if miningFlag:
-                                    #     self.btnStart.setText("Start")
-                                    #     self.textboxWallet.setEnabled(True)
-                                    #     self.textboxMigingname.setEnabled(True)
-                                    #     self.btnSaveMining.setEnabled(True)
-                                    #     MiningProcess.kill()
-                                    #     checkStart = 0
-                                    #     GPUCheckFlag = False
-                                    #     miningFlag = False
+                                    if miningFlag:
+                                        self.btnStart.setText("Start")
+                                        self.textboxWallet.setEnabled(True)
+                                        self.textboxMigingname.setEnabled(True)
+                                        self.btnSaveMining.setEnabled(True)
+                                        MiningProcess.kill()
+                                        checkStart = 0
+                                        GPUCheckFlag = False
+                                        miningFlag = False
                                     TemCount=0 
                         else:
                                 TemCount=0
-                                print("reset TemCount = 0 ")
 
 
 if __name__ == '__main__':

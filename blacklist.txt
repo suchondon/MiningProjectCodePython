@@ -1,13 +1,2 @@
 [blacklist]
-lyra2v3 = 1
-scrypt = 1
-blake2s = 1
-tribus = 1
-skunk = 1
-lyra2v2 = 1
-x13 = 1
-neoscrypt = 1
-sib = 1
-sha256t = 1
-qubit = 1
 

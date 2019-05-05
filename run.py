@@ -746,7 +746,6 @@ class App(QWidget):
                     lasttime = time.time()
                     while GPUCheckFlag and (time.time()-lasttime)<timeToCheck:
                         time.sleep(1)
-                        print('count GUPCheck')
 
                     process = subprocess.Popen(os.getcwd()+r'\GPU\nvidia-smi.exe --format=csv,noheader --query-gpu=gpu_name,utilization.gpu,utilization.memory,fan.speed,temperature.gpu', shell=True, stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
                     GPUValue = str(process)
@@ -817,6 +816,12 @@ class App(QWidget):
 
                         if miningFlag==False and int(Value[3])<gpulowfan and int(Value[4])<gpulowtem:
                             print('AutoStart')
+                            FacebookID = readConfig('notify','facebookID','config.ini')
+                            facebooktoken = readConfig('notify','tokenfacebook','config.ini')
+                            linetoken = readConfig('notify','tokenline','config.ini')
+                            msg = 'GPU Temperature < '+str(gpulowtem)+' '+u'\u2103'+' GPU FAN use < '+str(gpulowtem)+' % Auto Start mining now'
+                            line(linetoken,msg)
+                            facebook(facebooktoken,FacebookID,msg) 
                             AutoMining = Thread(target=switchAlgo, args=(wallet,))
                             AutoMining.daemon = True
                             self.btnStart.setText("Stop")

@@ -58,23 +58,23 @@ def checkProfit(wallet):
         try:
             getWallet = requests.get(url='https://www.zpool.ca/api/wallet?address='+wallet)
             data  = getWallet.json()
+            money = Decimal(data['unsold'])
         except requests.exceptions.RequestException:
-            pass
+            money=0
         
-        money = Decimal(data['unsold'])
         if limitTime!='':
-            limitTime = int(limitTime)
+            limitTime = (int(limitTime)*3600)  
+            #limitTime = 10 #hardcode for test
             lasttime = time.time()
             while miningFlag and (time.time()-lasttime)<limitTime:
-                print("count Switch")
                 time.sleep(1)
             try:
                 getWallet = requests.get(url='https://www.zpool.ca/api/wallet?address='+wallet)
                 data  = getWallet.json()
+                newmoney = Decimal(data['unsold'])
             except requests.exceptions.RequestException:
-                pass
+                money=1
             
-            newmoney = Decimal(data['unsold'])
             if newmoney==money and miningFlag:
                 saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
                 print('Add '+selectAlgo)
@@ -92,6 +92,7 @@ def switchAlgo(wallet):
         data  = x.json()
     except requests.exceptions.RequestException:
         data = ''
+        miningFlag = False
     if data!='':
         profit = 0.0
         blacklist = ['']
@@ -131,6 +132,11 @@ def switchAlgo(wallet):
             miningFlag = False
             time.sleep(1)
             MiningProcess.kill()
+            LineValue = readConfig('notify','tokenline','config.ini')
+            FacebookValue = readConfig('notify','tokenfacebook','config.ini')
+            FacebookIDValue = readConfig('notify','facebookID','config.ini')
+            line(LineValue,'Switch Algorithm to '+selectAlgo)
+            facebook(FacebookValue,FacebookIDValue,'Switch Algorithm to '+selectAlgo) 
             mining(wallet)
     else:
         print('Please check your internet connect')
@@ -549,7 +555,6 @@ class App(QWidget):
         try:
             timenotify = self.textboxNotifyTime.text()
             timenotify = float(timenotify)
-            timenotify = (timenotify*60)
             timenotify = int(timenotify)
             saveConfig('notify','notifyTime',str(timenotify),'config.ini')
             NotifyFlag = False
@@ -563,7 +568,7 @@ class App(QWidget):
             NotifyFlag=True
             timenotify = readConfig('notify','notifytime','config.ini')
             if timenotify !='':
-                timenotify = int(timenotify)
+                timenotify = (int(timenotify)*60)
                 lasttime = time.time()
                 while(NotifyFlag and (time.time()-lasttime)<timenotify):
                     time.sleep(1)
@@ -696,7 +701,6 @@ class App(QWidget):
         
         time = readConfig('notify','notifytime','config.ini')
         if(time!=''):
-            (time) = int(int(time)/60)
             self.textboxNotifyTime.setText(str(time))
 
         infodashboard = [readConfig('dashboard','ip','config.ini'),
@@ -717,32 +721,38 @@ class App(QWidget):
     def GPUCheck(self,wallet):
         global GPUCheckFlag,miningFlag,selectAlgo,MiningProcess,checkStart
         GPUCheckFlag = True
-        wallet = readConfig('mining','wallet','config.ini')
-        LoadCount = 1
-        FanCount = 1
-        TemCount = 1
-        timeToCheck = 30
-        gpulowfan = 40
-        gpulowtem = 50
-        count = 1
+        LoadCount = 0
+        FanCount = 0
+        TemCount = 0
+        
         while(GPUCheckFlag):
-                gpulowload = readConfig('mining','gpuload','config.ini')
-                gpuhighfan = readConfig('mining','gpufan','config.ini')
-                gpuhightem = readConfig('mining','gputem','config.ini')
-                process = subprocess.Popen(os.getcwd()+r'\GPU\nvidia-smi.exe --format=csv,noheader --query-gpu=gpu_name,utilization.gpu,utilization.memory,fan.speed,temperature.gpu', shell=True, stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
-                GPUValue = str(process)
-                newValue = GPUValue.replace("%", "")
-                newValue = newValue.replace(" ", "")
-                Value = newValue.split(",")
+                gpulowload = readConfig('mining','gpulowload','config.ini')
+                gpuhighfan = readConfig('mining','gpuhighfan','config.ini')
+                gpuhightem = readConfig('mining','gpuhightem','config.ini')
+                wallet = readConfig('mining','wallet','config.ini')
+                timeToCheck = readConfig('mining','timetocheck','config.ini')
+                count = readConfig('mining','gpucheckhit','config.ini')
+                gpulowfan = readConfig('mining','gpulowfan','config.ini')
+                gpulowtem = readConfig('mining','gpulowtem','config.ini')
 
-                if gpulowload!='' and gpuhighfan!='' and gpuhightem!='':
-                    print("IF != null")
+                if gpulowload!='' and gpuhighfan!='' and gpuhightem!='' and wallet!='' and timeToCheck!='' and count!='' and gpulowfan!='' and gpulowtem!='':
                     gpulowload = int(gpulowload)
                     gpuhighfan = int(gpuhighfan)
                     gpuhightem = int(gpuhightem)
+                    timeToCheck = (int(timeToCheck)*60)
+                    count = int(count)
+                    gpulowfan = int(gpulowfan)
+                    gpulowtem = int(gpulowtem)
                     lasttime = time.time()
                     while GPUCheckFlag and (time.time()-lasttime)<timeToCheck:
                         time.sleep(1)
+                        print('count GUPCheck')
+
+                    process = subprocess.Popen(os.getcwd()+r'\GPU\nvidia-smi.exe --format=csv,noheader --query-gpu=gpu_name,utilization.gpu,utilization.memory,fan.speed,temperature.gpu', shell=True, stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
+                    GPUValue = str(process)
+                    newValue = GPUValue.replace("%", "")
+                    newValue = newValue.replace(" ", "")
+                    Value = newValue.split(",")
                         
                     if GPUCheckFlag:
                         print("IF notify TRUE")
@@ -758,9 +768,9 @@ class App(QWidget):
                                     saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
                                     if miningFlag:
                                         switchAlgo(wallet)
-                                    LoadCount=1
+                                    LoadCount=0
                         else:
-                                LoadCount=1
+                                LoadCount=0
 
                         if int(Value[3])>gpuhighfan and miningFlag:
                                 FanCount+=1
@@ -779,9 +789,9 @@ class App(QWidget):
                                         MiningProcess.kill()
                                         checkStart = 0
                                         miningFlag = False
-                                    FanCount=1
+                                    FanCount=0
                         else:
-                                FanCount=1
+                                FanCount=0
 
                         if int(Value[4])>gpuhightem and miningFlag:
                                 TemCount+=1
@@ -801,18 +811,19 @@ class App(QWidget):
                                         MiningProcess.kill()
                                         checkStart = 0
                                         miningFlag = False
-                                    TemCount=1
+                                    TemCount=0
                         else:
-                                TemCount=1
+                                TemCount=0
 
-                        if MiningProcess.poll()!=None and int(Value[3])<gpulowfan and int(Value[4])<gpulowtem:
-                            if wallet!='':
-                                self.btnStart.setText("Stop")
-                                self.textboxWallet.setEnabled(False)
-                                self.textboxMigingname.setEnabled(False)
-                                self.btnSaveMining.setEnabled(False)
-                                checkStart = 1
-                                mining(wallet)
+                        if miningFlag==False and int(Value[3])<gpulowfan and int(Value[4])<gpulowtem:
+                            print('AutoStart')
+                            AutoMining = Thread(target=switchAlgo, args=(wallet,))
+                            AutoMining.daemon = True
+                            self.btnStart.setText("Stop")
+                            self.textboxWallet.setEnabled(False)
+                            self.textboxMigingname.setEnabled(False)
+                            self.btnSaveMining.setEnabled(False)
+                            AutoMining.start()
 
 
 if __name__ == '__main__':

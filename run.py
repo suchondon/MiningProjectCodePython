@@ -77,7 +77,7 @@ def checkProfit(wallet):
                 data  = getWallet.json()
                 newmoney = Decimal(data['unsold'])
             except requests.exceptions.RequestException:
-                money=1
+                newmoney=1
             
             if newmoney==money and miningFlag:
                 saveConfig('blacklist',selectAlgo,'1','blacklist.txt')

@@ -61,7 +61,7 @@ def checkProfit(wallet):
             data  = getWallet.json()
             money = Decimal(data['unsold'])
         except requests.exceptions.RequestException:
-            money=0
+            money = -1
         
         if limitTime!='':
             try:
@@ -78,15 +78,15 @@ def checkProfit(wallet):
                 data  = getWallet.json()
                 newmoney = Decimal(data['unsold'])
             except requests.exceptions.RequestException:
-                newmoney=1
+                newmoney = -2
             
             if newmoney==money and miningFlag:
                 saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
-                print('Add '+selectAlgo)
+                #print('Add '+selectAlgo)
             if miningFlag:
-                print("check Profit")
-                linetoken = readConfig('notify','tokenline','config.ini')
-                line(linetoken,'check Profit')
+                #print("check Profit")
+                # linetoken = readConfig('notify','tokenline','config.ini')
+                # line(linetoken,'Check Profit')
                 switchAlgo(wallet)
 
 

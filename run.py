@@ -30,10 +30,10 @@ pastAlgo = ""
 checkInternet = False
 
 
-def mining(wallet):
+def mining(wallet):     #สั่งขุด
     global MiningProcess,checkStart,miningFlag,selectAlgo
     algo = selectAlgo
-    print(algo+" | "+wallet)
+    #print(algo+" | "+wallet)
     miningFlag=True
     try:
         getFromPool = requests.get(url='https://www.zpool.ca/api/status')
@@ -42,12 +42,12 @@ def mining(wallet):
         pass
     MiningProcess = subprocess.Popen(os.getcwd()+r'\miner\ccminer\ccminer-x64.exe -b 4068 -a '+algo+' -o stratum+tcp://'+algo+'.mine.zpool.ca:'+str(data[algo]['port'])+' -u '+wallet+' -p ID=Test01,c=BTC',shell=False,creationflags=subprocess.CREATE_NEW_CONSOLE)
     checkStart = 1
-    atexit.register(MiningProcess.kill)
+    atexit.register(MiningProcess.kill) #ถ้าโปรแกรมหลักถูกปิด จะทำการหยุดขุด
     TcheckProfit = Thread(target=checkProfit, args=(wallet,))
-    TcheckProfit.daemon = True
+    TcheckProfit.daemon = True  #ถ้าโปรแกรมถูกปิดเทรดจะปิดอัตโนมัติ
     TcheckProfit.start()
     while miningFlag:
-        if MiningProcess.poll()!=None:
+        if MiningProcess.poll()!=None:  #เช็คตัว miner ว่าถูกปิดไม่ถูกวิธี?
             MiningProcess = subprocess.Popen(os.getcwd()+r'\miner\ccminer\ccminer-x64.exe -b 4068 -a '+algo+' -o stratum+tcp://'+algo+'.mine.zpool.ca:'+str(data[algo]['port'])+' -u '+wallet+' -p ID=Test01,c=BTC',shell=False,creationflags=subprocess.CREATE_NEW_CONSOLE)
             atexit.register(MiningProcess.kill)
         time.sleep(1)
@@ -80,7 +80,7 @@ def checkProfit(wallet):
             except requests.exceptions.RequestException:
                 newmoney = -2
             
-            if newmoney==money and miningFlag:
+            if newmoney==money and miningFlag:  #   เช็คค่าใน wallet ครั้งแรก กับ ค่าหลังจากเวลาที่เซ็ตไว้ wallet ต้องเท่ากันเท่านั้นจะถือว่าขุดลม
                 saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
                 #print('Add '+selectAlgo)
             if miningFlag:
@@ -108,18 +108,18 @@ def switchAlgo(wallet):
                 'phi2','polytimos','quark','qubit','scrypt','sha256t','sib',
                 'skein','skunk','sonoa','timetravel','tribus','x11','x13','x14',
                 'x16r','x16s','x17']
-        for i in algo:
+        for i in algo:  #เช็คในในไฟล์ blacklist ว่ามีสถานะ 1 ?
             block = readConfig('blacklist',i,'blacklist.txt')
             if block!='':
                 block = int(block)
                 if block==1:
                     blacklist.append(i)
 
-        for i in algo:
+        for i in algo:  #จะทำการย้อนกลับเก็บไว้ในตัวแปร AlgoProfit
             data[i].reverse()
             profit=float(data[i][0][1])
             AlgoProfit[i] = profit
-        for i in algo:
+        for i in algo:  #ถ้าชื่อ algor เหมือนกันจะเอาออกจากตัวแปร AlgoProfit
             for j in blacklist:
                 if i==j:
                     AlgoProfit.pop(i)
@@ -127,12 +127,12 @@ def switchAlgo(wallet):
         selectAlgo = max(AlgoProfit,key=AlgoProfit.get)
                     
 
-        if checkStart==0:
+        if checkStart==0:   #ขุดครั้งแรก
             pastAlgo = selectAlgo
             mining(wallet)
-        elif selectAlgo==pastAlgo:
+        elif selectAlgo==pastAlgo:  #ถ้าขุดแล้ว algor เดิม
             pass
-        elif selectAlgo!=pastAlgo:
+        elif selectAlgo!=pastAlgo:  #ถ้าขุดแล้วเปลี่ยน algor
             pastAlgo = selectAlgo
             miningFlag = False
             time.sleep(1)
@@ -188,8 +188,8 @@ def getHashRate():
         host = '127.0.0.1'
         port = 4068
         s.connect((host, port))
-        s.send("summary".encode())
-        msg = str(s.recv(4096))         
+        s.send("summary".encode())  #แปลงเป็นไบต์เพื่อส่งผ่าน network ได้
+        msg = str(s.recv(4096))    #ขนาดที่จะรับข้อมูล เป็นไบต์    
         msg = msg.split(';')
         s.close()
         time.sleep(1)
@@ -281,8 +281,8 @@ def sendDataToDB(host,port,user,password,dbname,clientname):
             }
         ]
 
-        client = InfluxDBClient(host, port, user, password, dbname)
-        client.write_points(json_body)
+        client = InfluxDBClient(host, port, user, password, dbname) #เป็น modul ของ python
+        client.write_points(json_body)  #ส่งไปหา dashboard
 
 
 class App(QWidget):
@@ -546,7 +546,7 @@ class App(QWidget):
             self.labelGPU.setText(Value[0])
             self.labelGPU.adjustSize()
             self.labelGPUValue.setText('Load '+Value[1]+' Memory'+Value[2]+' Fan'+Value[3]+' '+Value[4]+' '+u'\u2103')
-            self.labelGPUValue.adjustSize()
+            self.labelGPUValue.adjustSize() #ขนาดตัวอักษรพอดี
         
 
 
@@ -702,7 +702,7 @@ class App(QWidget):
                 self.btnSaveMining.setEnabled(False)
                 self.btnStart.setText("Start..")
                 GPUCheck = Thread(target=self.GPUCheck, args=(wallet,))
-                GPUCheck.daemon = True
+                GPUCheck.daemon = True  #ปิดโปรแกรม จะคิว process
                 StartMining = Thread(target=switchAlgo, args=(wallet,))
                 StartMining.daemon = True
                 StartStop = Thread(target=self.btnStartStop)

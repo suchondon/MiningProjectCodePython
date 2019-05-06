@@ -63,7 +63,11 @@ def checkProfit(wallet):
             money=0
         
         if limitTime!='':
-            limitTime = (int(limitTime)*3600)  
+            try:
+                limitTime = (int(limitTime)*3600)
+            except ValueError:
+                limitTime = 24*3600
+                saveConfig('mining','timeprofit',str(24),'config.ini')
             #limitTime = 10 #hardcode for test
             lasttime = time.time()
             while miningFlag and (time.time()-lasttime)<limitTime:
@@ -139,7 +143,8 @@ def switchAlgo(wallet):
             facebook(FacebookValue,FacebookIDValue,'Switch Algorithm to '+selectAlgo) 
             mining(wallet)
     else:
-        print('Please check your internet connect')
+        #print('Please check your internet connect')
+        pass
 
 # def benchmark(wallet):
 #     count = 1
@@ -545,9 +550,7 @@ class App(QWidget):
 
 
     def on_click_saveTimeNotify(self):
-        SaveNotifyTime = Thread(target=self.saveNotifyTime)
-        SaveNotifyTime.daemon = True
-        SaveNotifyTime.start()
+        self.saveNotifyTime()
         
 
     def saveNotifyTime(self):
@@ -558,8 +561,19 @@ class App(QWidget):
             timenotify = int(timenotify)
             saveConfig('notify','notifyTime',str(timenotify),'config.ini')
             NotifyFlag = False
+            alert = QMessageBox(self)
+            alert.setStandardButtons(QMessageBox.Close)
+            alert.setIcon(QMessageBox.Information)
+            alert.setWindowTitle('Result of Save')
+            alert.setText("<font color='green'>Save successfully</font>")
+            alert.exec_()
         except ValueError:
-            pass
+            alert = QMessageBox(self)
+            alert.setStandardButtons(QMessageBox.Close)
+            alert.setIcon(QMessageBox.Information)
+            alert.setWindowTitle('Result of Save')
+            alert.setText("<font color='red'>Invalid value or value is empty</font>")
+            alert.exec_()
         
 
     def runNotify(self):
@@ -613,8 +627,19 @@ class App(QWidget):
             saveConfig('dashboard','password',password,'config.ini')
             saveConfig('dashboard','databasename',dbname,'config.ini')
             saveConfig('dashboard','clientname',clientname,'config.ini')
+            alert = QMessageBox(self)
+            alert.setStandardButtons(QMessageBox.Close)
+            alert.setIcon(QMessageBox.Information)
+            alert.setWindowTitle('Result of Save')
+            alert.setText("<font color='green'>Save successfully</font>")
+            alert.exec_()
         else:
-            pass
+            alert = QMessageBox(self)
+            alert.setStandardButtons(QMessageBox.Close)
+            alert.setIcon(QMessageBox.Information)
+            alert.setWindowTitle('Result of Save')
+            alert.setText("<font color='red'>Value is empty</font>")
+            alert.exec_()
 
 
     def sendToDB(self):
@@ -644,8 +669,20 @@ class App(QWidget):
         if(wallet!='' and miningName!=''):
             saveConfig('mining','wallet',wallet,'config.ini')
             saveConfig('mining','miningName',miningName,'config.ini')
+            alert = QMessageBox(self)
+            alert.setStandardButtons(QMessageBox.Close)
+            alert.setIcon(QMessageBox.Information)
+            alert.setWindowTitle('Result of Save')
+            alert.setText("<font color='green'>Save successfully</font>")
+            alert.exec_()
         else:
-            pass
+            alert = QMessageBox(self)
+            alert.setStandardButtons(QMessageBox.Close)
+            alert.setIcon(QMessageBox.Information)
+            alert.setWindowTitle('Result of Save')
+            alert.setText("<font color='red'>Value is empty</font>")
+            alert.exec_()
+
 
     def startmining(self):
         # global benchmarkFlag
@@ -736,13 +773,43 @@ class App(QWidget):
                 gpulowtem = readConfig('mining','gpulowtem','config.ini')
 
                 if gpulowload!='' and gpuhighfan!='' and gpuhightem!='' and wallet!='' and timeToCheck!='' and count!='' and gpulowfan!='' and gpulowtem!='':
-                    gpulowload = int(gpulowload)
-                    gpuhighfan = int(gpuhighfan)
-                    gpuhightem = int(gpuhightem)
-                    timeToCheck = (int(timeToCheck)*60)
-                    count = int(count)
-                    gpulowfan = int(gpulowfan)
-                    gpulowtem = int(gpulowtem)
+                    try:
+                        gpulowload = int(gpulowload)
+                    except ValueError:
+                        gpulowload = 40
+                        saveConfig('mining','gpulowload',str(gpulowload),'config.ini')
+                    try:
+                        gpuhighfan = int(gpuhighfan)
+                    except ValueError:
+                        gpuhighfan = 90
+                        saveConfig('mining','gpuhighfan',str(gpuhighfan),'config.ini')
+                    try:
+                        gpuhightem = int(gpuhightem)
+                    except ValueError:
+                        gpuhightem = 90
+                        saveConfig('mining','gpuhightem',str(gpuhightem),'config.ini')
+                    try:
+                        timeToCheck = (int(timeToCheck)*60)
+                    except ValueError:
+                        timeToCheck = 15
+                        saveConfig('mining','timeToCheck',str(15),'config.ini')
+                    try:
+                        count = int(count)
+                    except ValueError:
+                        count = 3
+                        saveConfig('mining','gpucheckhit',str(3),'config.ini')
+                    try:
+                        gpulowfan = int(gpulowfan)
+                    except ValueError:
+                        gpulowfan = 40
+                        saveConfig('mining','gpulowfan',str(40),'config.ini')
+                    try:
+                        gpulowtem = int(gpulowtem)
+                    except ValueError:
+                        count = 50
+                        saveConfig('mining','gpulowtem',str(50),'config.ini')
+                    
+                    
                     lasttime = time.time()
                     while GPUCheckFlag and (time.time()-lasttime)<timeToCheck:
                         time.sleep(1)

@@ -27,6 +27,7 @@ global selectAlgo
 
 checkStart = 0 
 pastAlgo = ""
+checkInternet = False
 
 
 def mining(wallet):
@@ -143,8 +144,8 @@ def switchAlgo(wallet):
             facebook(FacebookValue,FacebookIDValue,'Switch Algorithm to '+selectAlgo) 
             mining(wallet)
     else:
-        #print('Please check your internet connect')
         pass
+        
 
 # def benchmark(wallet):
 #     count = 1
@@ -774,6 +775,16 @@ class App(QWidget):
 
                 if gpulowload!='' and gpuhighfan!='' and gpuhightem!='' and wallet!='' and timeToCheck!='' and count!='' and gpulowfan!='' and gpulowtem!='':
                     try:
+                        timeToCheck = (int(timeToCheck)*60)
+                    except ValueError:
+                        timeToCheck = 15
+                        saveConfig('mining','timeToCheck',str(15),'config.ini')
+
+                    lasttime = time.time()
+                    while GPUCheckFlag and (time.time()-lasttime)<timeToCheck:
+                        time.sleep(1)
+                    
+                    try:
                         gpulowload = int(gpulowload)
                     except ValueError:
                         gpulowload = 40
@@ -788,11 +799,6 @@ class App(QWidget):
                     except ValueError:
                         gpuhightem = 90
                         saveConfig('mining','gpuhightem',str(gpuhightem),'config.ini')
-                    try:
-                        timeToCheck = (int(timeToCheck)*60)
-                    except ValueError:
-                        timeToCheck = 15
-                        saveConfig('mining','timeToCheck',str(15),'config.ini')
                     try:
                         count = int(count)
                     except ValueError:
@@ -809,10 +815,6 @@ class App(QWidget):
                         count = 50
                         saveConfig('mining','gpulowtem',str(50),'config.ini')
                     
-                    
-                    lasttime = time.time()
-                    while GPUCheckFlag and (time.time()-lasttime)<timeToCheck:
-                        time.sleep(1)
 
                     process = subprocess.Popen(os.getcwd()+r'\GPU\nvidia-smi.exe --format=csv,noheader --query-gpu=gpu_name,utilization.gpu,utilization.memory,fan.speed,temperature.gpu', shell=True, stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
                     GPUValue = str(process)
@@ -832,6 +834,7 @@ class App(QWidget):
                                     line(linetoken,msg)
                                     facebook(facebooktoken,FacebookID,msg)
                                     saveConfig('blacklist',selectAlgo,'1','blacklist.txt')
+                                    print('Add by LOAD '+selectAlgo)
                                     if miningFlag:
                                         switchAlgo(wallet)
                                     LoadCount=0
@@ -848,13 +851,8 @@ class App(QWidget):
                                     line(linetoken,msg)
                                     facebook(facebooktoken,FacebookID,msg)
                                     if miningFlag:
-                                        self.btnStart.setText("Start")
-                                        self.textboxWallet.setEnabled(True)
-                                        self.textboxMigingname.setEnabled(True)
-                                        self.btnSaveMining.setEnabled(True)
-                                        MiningProcess.kill()
-                                        checkStart = 0
                                         miningFlag = False
+                                        MiningProcess.kill()
                                     FanCount=0
                         else:
                                 FanCount=0
@@ -870,13 +868,8 @@ class App(QWidget):
                                     line(linetoken,msg)
                                     facebook(facebooktoken,FacebookID,msg)
                                     if miningFlag:
-                                        self.btnStart.setText("Start")
-                                        self.textboxWallet.setEnabled(True)
-                                        self.textboxMigingname.setEnabled(True)
-                                        self.btnSaveMining.setEnabled(True)
-                                        MiningProcess.kill()
-                                        checkStart = 0
                                         miningFlag = False
+                                        MiningProcess.kill()
                                     TemCount=0
                         else:
                                 TemCount=0
@@ -888,13 +881,10 @@ class App(QWidget):
                             linetoken = readConfig('notify','tokenline','config.ini')
                             msg = 'GPU Temperature < '+str(gpulowtem)+' '+u'\u2103'+' GPU FAN use < '+str(gpulowtem)+' % Auto Start mining now'
                             line(linetoken,msg)
+                            checkStart = 0
                             facebook(facebooktoken,FacebookID,msg) 
                             AutoMining = Thread(target=switchAlgo, args=(wallet,))
                             AutoMining.daemon = True
-                            self.btnStart.setText("Stop")
-                            self.textboxWallet.setEnabled(False)
-                            self.textboxMigingname.setEnabled(False)
-                            self.btnSaveMining.setEnabled(False)
                             AutoMining.start()
 
 
